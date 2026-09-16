@@ -5,11 +5,24 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { AdaptiveDpr, Preload } from "@react-three/drei";
 import { EffectComposer, Bloom, SMAA } from "@react-three/postprocessing";
 import type * as THREE from "three";
+import { S } from "@/lib/state";
 import { HeroVessel } from "./three/HeroVessel";
 import { Corridor } from "./three/Corridor";
 import { Dust } from "./three/Dust";
 import { Lighting } from "./three/Stage";
 import { Rig } from "./three/Rig";
+
+/** tell the loader the moment there is actually something to reveal */
+function ReadySignal() {
+  const done = useRef(false);
+  useFrame(() => {
+    if (!done.current) {
+      done.current = true;
+      S.sceneReady = true;
+    }
+  });
+  return null;
+}
 
 /** widen the lens on tall screens so nothing gets cropped at the lip */
 function Responsive() {
@@ -81,6 +94,7 @@ export function Scene() {
         </Suspense>
 
         <Rig />
+        <ReadySignal />
         <Responsive />
         <Governor onGiveUp={() => setHeavy(false)} />
         <AdaptiveDpr pixelated={false} />

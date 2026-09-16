@@ -16,8 +16,16 @@ export interface SceneState {
   pointer: { x: number; y: number };
   /** index of the work currently held on screen (act 03) */
   work: number;
-  /** true once the intro reveal has finished */
-  ready: boolean;
+  /**
+   * 0..1 reveal, driven by the loader rather than by scroll. Every beat is
+   * multiplied by it, so the opening frame can stage itself in before the
+   * page has been scrolled at all.
+   */
+  intro: number;
+  /** 0..1 — how much of the hero silhouette has been drawn on load */
+  heroDraw: number;
+  /** flipped once the WebGL scene has rendered a frame */
+  sceneReady: boolean;
 }
 
 export const S: SceneState = {
@@ -34,7 +42,9 @@ export const S: SceneState = {
   },
   pointer: { x: 0, y: 0 },
   work: 0,
-  ready: false,
+  intro: 0,
+  heroDraw: 0,
+  sceneReady: false,
 };
 
 /* ---------- small maths helpers used everywhere ---------- */

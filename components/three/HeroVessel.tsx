@@ -131,8 +131,9 @@ export function HeroVessel() {
     kit.mesh.visible = smoothOpacity.current > 0.004;
 
     // drawing in: the profile is literally drawn before anything is turned
-    // a hand is already partway through the drawing when you arrive
-    const drawn = 0.1 + 0.9 * smoothRange(A.threshold, 0.0, 0.4);
+    // the silhouette is drawn in by the loader, then held by scroll — so the
+    // opening frame is a finished drawing rather than an empty one
+    const drawn = Math.max(S.heroDraw, smoothRange(A.threshold, 0.0, 0.32));
     const drawCount = Math.max(2, Math.round(drawn * PROFILE_RES));
     updateProfileLine(edgeA, scratch);
     updateProfileLine(edgeB, scratch);

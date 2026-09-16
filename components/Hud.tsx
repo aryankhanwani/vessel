@@ -5,21 +5,7 @@ import gsap from "gsap";
 import { ACTS, ACT_RANGE } from "@/lib/acts";
 import { scrollToAct } from "@/lib/lenis";
 import { S } from "@/lib/state";
-
-/** the mark: a profile, turned. drawn, not imported. */
-function Mark({ size = 22 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <ellipse cx="12" cy="5.2" rx="6.2" ry="1.9" stroke="currentColor" strokeWidth="0.7" />
-      <path
-        d="M5.8 5.2c0 4.4 -3 5.6 -3 9.1C2.8 17.9 6.9 21 12 21s9.2-3.1 9.2-6.7c0-3.5-3-4.7-3-9.1"
-        stroke="currentColor"
-        strokeWidth="0.7"
-      />
-      <ellipse cx="12" cy="14.3" rx="9.2" ry="2.6" stroke="currentColor" strokeWidth="0.35" opacity="0.4" />
-    </svg>
-  );
-}
+import { Mark } from "@/components/Mark";
 
 export function Hud() {
   const [act, setAct] = useState(0);

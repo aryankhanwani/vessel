@@ -10,8 +10,10 @@ import { S, clamp, smoothRange } from "@/lib/state";
 gsap.registerPlugin(ScrollTrigger);
 
 /* ---------------------------------------------------------------- ticker --
-   Every beat on the page is driven from one rAF loop. Styles are written
-   straight to the element — React never sees a scroll frame.
+   Every beat on the page is written from one place, called by SmoothScroll
+   immediately after Lenis has advanced the scroll and ScrollTrigger has
+   published act progress. Sharing that clock is what keeps the copy and the
+   WebGL in the same frame — a second rAF loop here would drift by one.
 --------------------------------------------------------------------------- */
 
 interface Entry {
@@ -25,41 +27,65 @@ interface Entry {
   yOut: number;
   x: number;
   hold: boolean;
+  present: boolean;
   blur: number;
+  introAt: number;
+  /** last written values, so we never touch the DOM for an unchanged style */
+  o: number;
+  ty: number;
+  tx: number;
+  bl: number;
+  off: boolean;
 }
 
 const entries = new Set<Entry>();
-let raf = 0;
 
-function loop() {
+export function updateBeats() {
   for (const e of entries) {
     const p = S.acts[e.act];
-    const enter = smoothRange(p, e.a, e.b);
+    const enter = e.present ? 1 : smoothRange(p, e.a, e.b);
     const exit = e.hold ? 0 : smoothRange(p, e.c, e.d);
-    const o = clamp(enter * (1 - exit));
-    const ty = (1 - enter) * e.y + exit * e.yOut;
-    const tx = (1 - enter) * e.x - exit * e.x * 0.6;
-    e.el.style.opacity = String(o);
-    e.el.style.transform = `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0)`;
-    if (e.blur) {
-      const b = (1 - o) * e.blur;
-      e.el.style.filter = b > 0.12 ? `blur(${b.toFixed(2)}px)` : "none";
-    }
-    e.el.style.visibility = o < 0.004 ? "hidden" : "visible";
-  }
-  raf = requestAnimationFrame(loop);
-}
+    const staged = smoothRange(S.intro, e.introAt, Math.min(1, e.introAt + 0.45));
+    const o = clamp(enter * (1 - exit) * staged);
 
-function register(entry: Entry) {
-  entries.add(entry);
-  if (!raf) raf = requestAnimationFrame(loop);
-  return () => {
-    entries.delete(entry);
-    if (!entries.size) {
-      cancelAnimationFrame(raf);
-      raf = 0;
+    // the cheapest frame is the one that touches nothing: six acts out of seven
+    // are always off screen, and they cost a comparison each
+    if (o < 0.004) {
+      if (!e.off) {
+        e.el.style.visibility = "hidden";
+        e.el.style.opacity = "0";
+        e.off = true;
+        e.o = 0;
+      }
+      continue;
     }
-  };
+    if (e.off) {
+      e.el.style.visibility = "visible";
+      e.off = false;
+    }
+
+    const ty = (1 - enter) * e.y + exit * e.yOut + (1 - staged) * 24;
+    const tx = (1 - enter) * e.x - exit * e.x * 0.6;
+
+    if (Math.abs(o - e.o) > 0.002) {
+      e.el.style.opacity = o.toFixed(3);
+      e.o = o;
+    }
+    if (Math.abs(ty - e.ty) > 0.05 || Math.abs(tx - e.tx) > 0.05) {
+      e.el.style.transform = `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0)`;
+      e.ty = ty;
+      e.tx = tx;
+    }
+    if (e.blur) {
+      // quantised: a continuously changing blur re-rasterises large type on
+      // every single frame, which is the most expensive thing on the page
+      const bl = Math.round((1 - o) * e.blur * 4) / 4;
+      if (bl !== e.bl) {
+        e.el.style.filter = bl > 0.2 ? `blur(${bl}px)` : "none";
+        e.bl = bl;
+      }
+    }
+  }
 }
 
 /* ------------------------------------------------------------------ act -- */
@@ -113,8 +139,8 @@ export function ActSection({
 
 interface BeatProps {
   act: ActId;
-  /** fade in between these two points of the act, 0..1 */
-  enter: [number, number];
+  /** fade in between these two points of the act — omit to be there already */
+  enter?: [number, number];
   /** and out between these — omit to hold to the end of the act */
   exit?: [number, number];
   /** distance travelled on the way in / on the way out, px */
@@ -122,6 +148,8 @@ interface BeatProps {
   yOut?: number;
   x?: number;
   blur?: number;
+  /** where in the load reveal this arrives, 0..0.55 */
+  introAt?: number;
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
@@ -139,6 +167,7 @@ export function Beat({
   yOut = -26,
   x = 0,
   blur = 0,
+  introAt = 0,
   className = "",
   style,
   children,
@@ -148,21 +177,32 @@ export function Beat({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    return register({
+    const entry: Entry = {
       el,
       act,
-      a: enter[0],
-      b: enter[1],
+      a: enter ? enter[0] : 0,
+      b: enter ? enter[1] : 0,
       c: exit ? exit[0] : 1,
       d: exit ? exit[1] : 1,
       y,
       yOut,
       x,
       hold: !exit,
+      present: !enter,
       blur,
-    });
+      introAt,
+      o: -1,
+      ty: -9999,
+      tx: -9999,
+      bl: -1,
+      off: false,
+    };
+    entries.add(entry);
+    return () => {
+      entries.delete(entry);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [act, enter[0], enter[1], exit?.[0], exit?.[1], y, yOut, x, blur]);
+  }, [act, enter?.[0], enter?.[1], exit?.[0], exit?.[1], y, yOut, x, blur, introAt]);
 
   return (
     <div

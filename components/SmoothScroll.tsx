@@ -6,6 +6,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { S, damp } from "@/lib/state";
 import { lenisRef } from "@/lib/lenis";
+import { updateBeats } from "@/components/Beat";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -21,17 +22,21 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
     ).matches;
 
     const lenis = new Lenis({
-      duration: 1.25,
-      lerp: reduced ? 1 : 0.085,
-      wheelMultiplier: 0.95,
-      touchMultiplier: 1.5,
+      // lerp mode: a fixed catch-up fraction per frame reads smoother under a
+      // heavy render than a fixed-duration tween, which stalls when frames slip
+      lerp: reduced ? 1 : 0.11,
+      wheelMultiplier: 1,
+      touchMultiplier: 1.6,
       smoothWheel: !reduced,
-      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      syncTouch: !reduced,
+      syncTouchLerp: 0.085,
     });
 
     lenisRef.current = lenis;
     if (process.env.NODE_ENV !== "production") {
-      (window as unknown as { __lenis?: Lenis }).__lenis = lenis;
+      const w = window as unknown as { __lenis?: Lenis; __S?: typeof S };
+      w.__lenis = lenis;
+      w.__S = S;
     }
 
     let smoothVel = 0;
@@ -42,12 +47,15 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
       ScrollTrigger.update();
     });
 
-    // one clock for everything — gsap's ticker
+    // one clock for everything — gsap's ticker. Order matters: Lenis advances
+    // the scroll, its listener publishes act progress, and only then is the
+    // copy written, so type and WebGL are never a frame apart.
     const tick = (time: number, delta: number) => {
       lenis.raf(time * 1000);
       const dt = Math.min(delta / 1000, 1 / 30);
       S.vel = damp(S.vel, smoothVel, 9, dt);
       smoothVel *= 0.92;
+      updateBeats();
     };
 
     gsap.ticker.add(tick);
