@@ -104,6 +104,12 @@ canvas {
   color: var(--ember);
 }
 
+/* the turning steps are read while the form moves — they carry a size up */
+.mono--step {
+  font-size: clamp(11px, 0.92vw, 14px);
+  letter-spacing: 0.3em;
+}
+
 .serif {
   font-family: var(--f-serif);
   font-weight: 400;
@@ -252,9 +258,84 @@ canvas {
   z-index: 30;
   display: flex;
   flex-direction: column;
-  gap: 10px;
   align-items: flex-end;
+  gap: 0;
+  /* only the ticks take the pointer — the label column stays transparent to
+     it, so the rail never steals clicks from the copy in the right gutter */
   pointer-events: none;
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+    translate 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.75s ease;
+}
+
+/* the rail steps aside whenever something else wants the right margin */
+.rail--gone {
+  opacity: 0;
+  translate: 30px -50%;
+  filter: blur(4px);
+  pointer-events: none;
+}
+
+.rail__item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  padding: 6px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--dust);
+  font-family: var(--f-mono);
+}
+
+.rail__item:focus-visible {
+  outline: none;
+}
+
+.rail__item:focus-visible .rail__label {
+  opacity: 1;
+  translate: 0 0;
+  color: var(--bone);
+}
+
+.rail__label {
+  font-family: var(--f-mono);
+  font-weight: 300;
+  font-size: clamp(9px, 0.62vw, 10.5px);
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--dust);
+  opacity: 0;
+  translate: 10px 0;
+  transition: opacity 0.5s ease, translate 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.4s ease;
+}
+
+.rail__label b {
+  font-weight: 300;
+  color: var(--ash);
+  margin-right: 0.55em;
+}
+
+/* hovering anywhere on the rail opens the whole index of act names */
+.rail:hover .rail__label,
+.rail__item--on .rail__label {
+  opacity: 1;
+  translate: 0 0;
+}
+
+.rail__item--on .rail__label {
+  color: var(--bone);
+}
+
+.rail__item:hover .rail__label {
+  color: var(--bone);
+}
+
+.rail__item:hover .rail__label b {
+  color: var(--ember);
 }
 
 .rail__tick {
@@ -262,6 +343,43 @@ canvas {
   background: var(--dust);
   transition: width 0.55s cubic-bezier(0.16, 1, 0.3, 1),
     background-color 0.55s ease;
+}
+
+/* the ember pip sits on the act you are inside of */
+.rail__pip {
+  position: absolute;
+  right: -9px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--ember);
+  opacity: 0;
+  scale: 0.4;
+  transition: opacity 0.5s ease, scale 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.rail__item--on .rail__pip {
+  opacity: 1;
+  scale: 1;
+}
+
+.rail__line {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-left: 22px;
+  pointer-events: auto;
+}
+
+.rail--gone .rail__line {
+  pointer-events: none;
+}
+
+@media (max-width: 860px) {
+  .rail__label {
+    display: none;
+  }
 }
 
 .vert {

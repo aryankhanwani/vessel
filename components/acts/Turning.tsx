@@ -37,8 +37,11 @@ export function Turning() {
           y={22}
           style={{ textAlign: "right", position: "absolute", top: 0, right: 0 }}
         >
-          <p className="mono mono--bone">Step one</p>
-          <p className="lede" style={{ marginTop: "0.6rem" }}>
+          <p className="mono mono--step mono--bone">Step one</p>
+          <p
+            className="lede"
+            style={{ marginTop: "0.6rem", fontSize: "clamp(1.5rem, 2.8vw, 2.8rem)" }}
+          >
             A profile
             <br />
             is drawn.
@@ -52,8 +55,11 @@ export function Turning() {
           y={22}
           style={{ textAlign: "right", position: "absolute", top: 0, right: 0 }}
         >
-          <p className="mono mono--ember">Step two</p>
-          <p className="lede" style={{ marginTop: "0.6rem" }}>
+          <p className="mono mono--step mono--ember">Step two</p>
+          <p
+            className="lede"
+            style={{ marginTop: "0.6rem", fontSize: "clamp(1.5rem, 2.8vw, 2.8rem)" }}
+          >
             The profile
             <br />
             is revolved.
@@ -66,8 +72,11 @@ export function Turning() {
           y={22}
           style={{ textAlign: "right", position: "absolute", top: 0, right: 0 }}
         >
-          <p className="mono mono--bone">Step three</p>
-          <p className="lede" style={{ marginTop: "0.6rem" }}>
+          <p className="mono mono--step mono--bone">Step three</p>
+          <p
+            className="lede"
+            style={{ marginTop: "0.6rem", fontSize: "clamp(1.5rem, 2.8vw, 2.8rem)" }}
+          >
             Three hundred
             <br />
             and sixty degrees.

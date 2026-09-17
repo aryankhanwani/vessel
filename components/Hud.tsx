@@ -10,9 +10,15 @@ import { Mark } from "@/components/Mark";
 export function Hud() {
   const [act, setAct] = useState(0);
   const [open, setOpen] = useState(false);
+  /* the rAF loop reads `open` without being re-created on every toggle */
+  const openRef = useRef(false);
+  openRef.current = open;
   const counter = useRef<HTMLSpanElement>(null);
-  const ticks = useRef<(HTMLDivElement | null)[]>([]);
+  const ticks = useRef<(HTMLSpanElement | null)[]>([]);
   const cursor = useRef<HTMLDivElement>(null);
+  const rail = useRef<HTMLDivElement>(null);
+  /** index of the rail tick under the pointer, -1 when the rail is at rest */
+  const near = useRef(-1);
 
   /* one rAF loop for every high-frequency readout — no React renders */
   useEffect(() => {
@@ -28,21 +34,37 @@ export function Hud() {
       }
 
       let idx = 0;
+      const n = near.current;
       for (let i = 0; i < ACTS.length; i++) {
         const [a, b] = ACT_RANGE[ACTS[i].id];
         if (p >= a && p < b) idx = i;
         const tick = ticks.current[i];
         if (tick) {
           const inside = p >= a ? Math.min(1, (p - a) / (b - a)) : 0;
-          tick.style.width = `${10 + inside * 24}px`;
+          /* the pointer pulls the ticks around it out, dock-style */
+          const pull = n < 0 ? 0 : Math.max(0, 1 - Math.abs(i - n) / 2.4) ** 2;
+          tick.style.width = `${10 + inside * 24 + pull * 26}px`;
           tick.style.backgroundColor =
-            p >= a && p < b ? "var(--bone)" : inside >= 1 ? "var(--dust)" : "var(--line)";
+            i === n || (p >= a && p < b)
+              ? "var(--bone)"
+              : inside >= 1
+                ? "var(--dust)"
+                : "var(--line)";
         }
       }
       if (p >= 0.999) idx = ACTS.length - 1;
       if (idx !== current) {
         current = idx;
         setAct(idx);
+      }
+
+      /* the sign-off hangs its social links in the right gutter — the rail
+         gets out of their way rather than stacking on top of them */
+      if (rail.current) {
+        rail.current.classList.toggle(
+          "rail--gone",
+          S.acts.signoff > 0.2 || openRef.current,
+        );
       }
 
       if (cursor.current) {
@@ -168,17 +190,46 @@ export function Hud() {
         </button>
       </div>
 
-      {/* ---- the act rail ---- */}
-      <div className="rail">
+      {/* ---- the act rail: a scrubbable index, not just a progress bar ---- */}
+      <div
+        ref={rail}
+        className="rail"
+        onPointerLeave={() => {
+          near.current = -1;
+        }}
+      >
         {ACTS.map((a, i) => (
-          <div
+          <button
             key={a.id}
-            ref={(el) => {
-              ticks.current[i] = el;
+            type="button"
+            aria-label={`Act ${a.n} — ${a.label}`}
+            className={`rail__item${i === act ? " rail__item--on" : ""}`}
+            onPointerEnter={() => {
+              near.current = i;
             }}
-            className="rail__tick"
-            style={{ width: 10 }}
-          />
+            onFocus={() => {
+              near.current = i;
+            }}
+            onBlur={() => {
+              near.current = -1;
+            }}
+            onClick={() => scrollToAct(a.id)}
+          >
+            <span className="rail__label">
+              <b>{a.n}</b>
+              {a.label}
+            </span>
+            <span className="rail__line">
+              <span
+                ref={(el) => {
+                  ticks.current[i] = el;
+                }}
+                className="rail__tick"
+                style={{ width: 10 }}
+              />
+              <span className="rail__pip" />
+            </span>
+          </button>
         ))}
       </div>
 
